@@ -5,7 +5,7 @@ import numpy as np
 
 ### phase 1 - reading i
 
-DIRECTORY = 'Temp/LiDAR'
+DIRECTORY = 'Temp/LiDAR' # defined as constant for now
 
 # takes in an open file object, and reads the first 6 lines to give an array of the metadata
 def getAscMeta(fileObj):
