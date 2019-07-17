@@ -1,7 +1,10 @@
+#!/usr/bin/python3
+
 # imports
 import re
 import os
 import numpy as np
+#import scipy.misc.imresize # we only need this for now
 
 DIRECTORY = 'Temp/LiDAR' # defined as constant for now
 
@@ -87,3 +90,11 @@ for partFilename in os.listdir(DIRECTORY):
             # actually superimpose the array
             #print(str(thisArrayOffset[0]) + ':' + str(thisArrayOffset[0]+int(thisCellMeta['ncols'])) + ', ' + str(thisArrayOffset[1]) + ':' + str(thisArrayOffset[1]+int(thisCellMeta['nrows']))) # uncomment for debugging!
             mainArray[thisArrayOffset[0]:thisArrayOffset[0]+int(thisCellMeta['ncols']), thisArrayOffset[1]:thisArrayOffset[1]+int(thisCellMeta['nrows'])] = thisArray  # this should be neater
+
+# eliminate NaNs
+for x in range(0,ARRAY_SHAPE[0]):
+    for y in range(0,ARRAY_SHAPE[1]):
+        if mainArray[x,y] == np.NaN: # this is the only case in which we take action
+            if np.prod(mainArray[x-1,y-1:x+1,y-1]) * np.prod(mainArray[x-1,y+1:x+1,y+1]) * mainArray[x-1,y] * mainArray[x+1,y] != 0: # if no surrounding element is zero, we can use an "implementation" of "bilinear interpolation"
+                # my implementation of biliniear interpolation may be foolishly called "finding the mean" by others...
+                mainArray[x,y] = np.nanmean(mainArray[x-1,y-1:x+1,y+1])
