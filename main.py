@@ -4,7 +4,7 @@
 import re
 import os
 import numpy as np
-#import scipy.misc.imresize # we only need this for now
+from PIL import Image # required for bilinear interpolation
 
 DIRECTORY = 'Temp/LiDAR' # defined as constant for now
 
@@ -73,7 +73,7 @@ NODATA_VALUE = noValue
 del(noValue)
 
 # actually create the array to store all the data
-mainArray = np.full(ARRAY_SHAPE,np.NaN)
+mainArray = np.full(ARRAY_SHAPE,np.NaN,dtype=np.uint16)
 
 # begin overlaying arrays
 for partFilename in os.listdir(DIRECTORY):
@@ -91,10 +91,45 @@ for partFilename in os.listdir(DIRECTORY):
             #print(str(thisArrayOffset[0]) + ':' + str(thisArrayOffset[0]+int(thisCellMeta['ncols'])) + ', ' + str(thisArrayOffset[1]) + ':' + str(thisArrayOffset[1]+int(thisCellMeta['nrows']))) # uncomment for debugging!
             mainArray[thisArrayOffset[0]:thisArrayOffset[0]+int(thisCellMeta['ncols']), thisArrayOffset[1]:thisArrayOffset[1]+int(thisCellMeta['nrows'])] = thisArray  # this should be neater
 
+# repeat with less authoritative sources
+secondArray = np.full(ARRAY_SHAPE,np.NaN,dtype=np.uint16)
+
+for partFilename in os.listdir(DIRECTORY):
+    if partFilename.lower().endswith('.asc'): # any file that we want
+        filename = DIRECTORY+'/'+partFilename
+        thisCellMeta = getAscMeta(open(filename, 'r'))
+        if thisCellMeta['cellsize'] != REAL_CELL_SIZE: # this time choosing less authoritative arrays
+            thisArray = np.loadtxt(filename,skiprows=6)
+            newSizeX = int(thisArray.shape[0]*(thisCellMeta['cellsize']/REAL_CELL_SIZE))
+            newSizeY = int(thisArray.shape[1]*(thisCellMeta['cellsize']/REAL_CELL_SIZE))
+            thisArray = np.array(Image.fromarray(thisArray).resize((newSizeX,newSizeY)))
+            thisArray[thisArray==NODATA_VALUE] = np.nan # potential for variation in NODATA_value to be supported
+            
+            # get offset coordinates
+            thisArrayOffset = (int((thisCellMeta['xllcorner']-ORIGIN_COORDINATES[0])*CELL_SCALE),int((thisCellMeta['yllcorner']-ORIGIN_COORDINATES[1])*CELL_SCALE)) # make more Pythonic?
+            
+            # actually superimpose the array
+            #print(str(thisArrayOffset[0]) + ':' + str(thisArrayOffset[0]+int(thisCellMeta['ncols'])) + ', ' + str(thisArrayOffset[1]) + ':' + str(thisArrayOffset[1]+int(thisCellMeta['nrows']))) # uncomment for debugging!
+            secondArray[thisArrayOffset[0]:thisArrayOffset[0]+newSizeX, thisArrayOffset[1]:thisArrayOffset[1]+newSizeY] = thisArray  # this line should be made neater
+
 # eliminate NaNs
+count1=0
+count2=0
+count3=0
 for x in range(0,ARRAY_SHAPE[0]):
     for y in range(0,ARRAY_SHAPE[1]):
-        if mainArray[x,y] == np.NaN: # this is the only case in which we take action
-            if np.prod(mainArray[x-1,y-1:x+1,y-1]) * np.prod(mainArray[x-1,y+1:x+1,y+1]) * mainArray[x-1,y] * mainArray[x+1,y] != 0: # if no surrounding element is zero, we can use an "implementation" of "bilinear interpolation"
-                # my implementation of biliniear interpolation may be foolishly called "finding the mean" by others...
-                mainArray[x,y] = np.nanmean(mainArray[x-1,y-1:x+1,y+1])
+        if np.isnan(mainArray[x,y]): # this is the only case in which we take action
+            # attempt interpolation...
+            if x > 0 and x < ARRAY_SHAPE[0]-1 and y > 0 and y < ARRAY_SHAPE[1]-1: # ...unless the cell is around the edge
+                if  not np.isnan(np.prod(mainArray[x-1:x+1,y-1]) * np.prod(mainArray[x-1:x+1,y+1]) * mainArray[x-1,y] * mainArray[x+1,y]): # if no surrounding element is zero, we can use an "implementation" of "bilinear interpolation"
+                    # my implementation of biliniear interpolation may be foolishly called "finding the mean" by others...
+                    mainArray[x,y] = np.nanmean(mainArray[x-1:x+1,y-1:y+1])
+                    count1 += 1
+            # it would be nice to add an interpolation method for the edge values at this point
+            # next best thing: find resources from less authoritative sources (aka. less detailed arrays)
+            elif secondArray[x,y] != np.NaN:
+                mainArray[x,y] = secondArray[x,y]
+                count2 += 1
+            # otherwise... I want to know about it!
+            else:
+                count3 += 1
