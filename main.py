@@ -3,8 +3,6 @@ import re
 import os
 import numpy as np
 
-### phase 1 - reading i
-
 DIRECTORY = 'Temp/LiDAR' # defined as constant for now
 
 # takes in an open file object, and reads the first 6 lines to give an array of the metadata
@@ -19,15 +17,18 @@ def getAscMeta(fileObj):
             meta[m.group(1).lower()] = float(m.group(2))
     return meta
 
-# finds the extremes of the dimensions of all *.asc files in the directory
+## Finds the extremes of the dimensions of all *.asc files in the directory
+
 minCellSize = 0
 minCoord = [-1,-1]
 maxCoord = [0,0]
 noValue = None # also look for NaN value; check consistency accross data
 
-for filename in os.listdir(DIRECTORY):
-    if filename.lower().endswith('.asc'): # any file that we want
-        thisCellMeta = getAscMeta(open(DIRECTORY+'/'+filename, 'r'))
+# looping through all files in the directory
+for partFilename in os.listdir(DIRECTORY):
+    if partFilename.lower().endswith('.asc'): # any file that we want
+        filename = DIRECTORY+'/'+partFilename
+        thisCellMeta = getAscMeta(open(filename, 'r'))
 
         # find the minimum cell size
         if thisCellMeta['cellsize'] < minCellSize or minCellSize == 0:
@@ -36,13 +37,13 @@ for filename in os.listdir(DIRECTORY):
         # find the extreme x-coordinates
         if thisCellMeta['xllcorner'] < minCoord[0] or minCoord[0] == -1:
             minCoord[0] = thisCellMeta['xllcorner']
-        elif thisCellMeta['xllcorner'] + thisCellMeta['ncols'] * thisCellMeta['cellsize'] > maxCoord[0]:
+        elif thisCellMeta['xllcorner'] + thisCellMeta['ncols'] * (1/thisCellMeta['cellsize']) > maxCoord[0]:
             maxCoord[0] = thisCellMeta['xllcorner'] + thisCellMeta['ncols'] * thisCellMeta['cellsize']
         
         # find the extreme y-coordinates
         if thisCellMeta['yllcorner'] < minCoord[1] or minCoord[1] == -1:
             minCoord[1] = thisCellMeta['yllcorner']
-        elif thisCellMeta['yllcorner'] + thisCellMeta['nrows'] * thisCellMeta['cellsize'] > maxCoord[1]:
+        elif thisCellMeta['yllcorner'] + thisCellMeta['nrows'] * (1/thisCellMeta['cellsize']) > maxCoord[1]:
             maxCoord[1] = thisCellMeta['yllcorner'] + thisCellMeta['nrows'] * thisCellMeta['cellsize']
         
         # check NaN value
@@ -54,10 +55,11 @@ for filename in os.listdir(DIRECTORY):
 
 
 # find desired array dimensions from min and max coords, in NumPy tuple format
-ARRAY_SHAPE = tuple(round(m-n) for m,n in zip(maxCoord,minCoord))
+ARRAY_SHAPE = tuple(round((m-n)*(1/minCellSize)) for m,n in zip(maxCoord,minCoord))
 
 # redefine other useful variables as constants
 REAL_CELL_SIZE = minCellSize
+CELL_SCALE = 1/minCellSize
 del(minCellSize)
 
 ORIGIN_COORDINATES = minCoord
@@ -68,5 +70,20 @@ NODATA_VALUE = noValue
 del(noValue)
 
 # actually create the array to store all the data
-mainArray = np.full(ARRAY_SHAPE,NODATA_VALUE)
-print(mainArray[0,0])
+mainArray = np.full(ARRAY_SHAPE,np.NaN)
+
+# begin overlaying arrays
+for partFilename in os.listdir(DIRECTORY):
+    if partFilename.lower().endswith('.asc'): # any file that we want
+        filename = DIRECTORY+'/'+partFilename
+        thisCellMeta = getAscMeta(open(filename, 'r'))
+        if thisCellMeta['cellsize'] == REAL_CELL_SIZE: # we only want arrays that we aren't resizing for now
+            thisArray = np.loadtxt(filename,skiprows=6)
+            thisArray[thisArray==NODATA_VALUE] = np.nan # potential for variation in NODATA_value to be supported
+            
+            # get offset coordinates
+            thisArrayOffset = (int((thisCellMeta['xllcorner']-ORIGIN_COORDINATES[0])*CELL_SCALE),int((thisCellMeta['yllcorner']-ORIGIN_COORDINATES[1])*CELL_SCALE)) # make more Pythonic?
+            
+            # actually superimpose the array
+            #print(str(thisArrayOffset[0]) + ':' + str(thisArrayOffset[0]+int(thisCellMeta['ncols'])) + ', ' + str(thisArrayOffset[1]) + ':' + str(thisArrayOffset[1]+int(thisCellMeta['nrows']))) # uncomment for debugging!
+            mainArray[thisArrayOffset[0]:thisArrayOffset[0]+int(thisCellMeta['ncols']), thisArrayOffset[1]:thisArrayOffset[1]+int(thisCellMeta['nrows'])] = thisArray  # this should be neater
