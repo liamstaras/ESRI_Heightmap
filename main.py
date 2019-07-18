@@ -136,12 +136,12 @@ mainArray -= MINIMUM_HEIGHT # we want to use as much entropy as possible!
 mainArray = (mainArray*65535/(MAXIMUM_HEIGHT-MINIMUM_HEIGHT)).astype(np.uint16) # spread the values evenly across 65536 integers and convert to uint16
 
 # write to a test file for debugging
-f = open('output.raw', 'wb')
+f = open('TEMP/output.raw', 'wb') # should at least be constant!
 f.write(mainArray.tobytes()) # write it in a binary file
 f.close()
 
 # also write tiff for debugging
-tiff.imwrite('output.tiff',mainArray)
+tiff.imwrite('TEMP/output.tiff',mainArray) # again, should be a constant
 
 
 # tell the user import settings for Unity - convert to more standard format in future to support more applications
