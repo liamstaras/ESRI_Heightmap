@@ -1,19 +1,31 @@
 #!/usr/bin/python3
 
-# imports
-import re
-import os
-import numpy as np
-from PIL import Image # required for bilinear interpolation
+## ESRI_Heighmap - Python code to process ESRI data into the form of a Unity-style heightmap for the creation of 3d objects
 
-import tifffile as tiff
+### NOTICE ###
+## If editing this code, there are a few things to bear in mind:
+# 1) NumPy array indexing SWAPS X AND Y - this caused many problems in the early stages of software development.
+# 2) My code is not in ANY WAY the best algorithmic solution to the problems layed out. If it is, then this is probably a coincidence.
+# 3) The method for importing and exporting data is currently very clunky. The path to a folder of *.asc files is defined below as the constant DIRECTORY and the output is a *.tif and *.raw file, each containing the same data.
 
-DIRECTORY = 'Temp/LiDAR' # defined as constant for now
+# terminonogy:
+# cell = a single part of a grid square
 
-# takes in an open file object, and reads the first 6 lines to give an array of the metadata
+## imports
+import re # for getAscMeta
+import os # for directory listings
+import numpy as np # for most other things
+from PIL import Image # required for bilinear interpolation function used to upscale low-res cells
+
+import tifffile as tiff # for producing a normal tiff file for debugging and showing off the code, not required in production version
+
+DIRECTORY = 'Temp/LiDAR' # defined as constant for now; could be parameter in final function?
+
+## takes in an open file object, and reads the first 6 lines to give an array of the metadata at the top - used extensively throughout program
+
 def getAscMeta(fileObj):
-    # borrowed from BlenderGIS, no license included; replace with own code.
-    meta_re = re.compile(r'^([^\s]+)\s+([^\s]+)$')
+    # borrowed from https://github.com/domlysz/BlenderGIS, in turn derived from https://github.com/hrbaer/Blender-ASCII-Grid-Import - no license included in either; replace with bespoke code in near future to avoid conflict
+    meta_re = re.compile(r'^([^\s]+)\s+([^\s]+)$') # strange regex magic
     meta = {}
     for i in range(6):
         line = fileObj.readline()
@@ -27,7 +39,6 @@ def getAscMeta(fileObj):
 minCellSize = 0
 minCoord = [-1,-1]
 maxCoord = [0,0]
-noValue = None # also look for NaN value; check consistency accross data
 
 # looping through all files in the directory
 for partFilename in os.listdir(DIRECTORY):
@@ -50,14 +61,8 @@ for partFilename in os.listdir(DIRECTORY):
             minCoord[1] = thisCellMeta['yllcorner']
         if thisCellMeta['yllcorner'] + thisCellMeta['nrows'] * (1/thisCellMeta['cellsize']) > maxCoord[1]:
             maxCoord[1] = thisCellMeta['yllcorner'] + thisCellMeta['nrows'] * thisCellMeta['cellsize']
-        
-        # check NaN value
-        if noValue == None:
-            noValue = thisCellMeta['nodata_value']
-        if thisCellMeta['nodata_value'] != noValue:
-            # much more processing is required to correctly handle this case; more than I require right now
-            raise ValueError('Inconsistency in ''nodata_value'', aborting.')
 
+## define some useful constants
 
 # find a cell scale factor
 REAL_CELL_SIZE = minCellSize
@@ -71,27 +76,28 @@ ORIGIN_COORDINATES = minCoord
 del(minCoord)
 del(maxCoord)
 
-NODATA_VALUE = noValue
-del(noValue)
+## actually import the data into NumPy
 
-# actually create the array to store all the data
+# create the arrays to store all the data
 mainArray = np.full(ARRAY_SHAPE,np.NaN)
-secondArray = np.full(ARRAY_SHAPE,np.NaN)
+secondArray = np.full(ARRAY_SHAPE,np.NaN) # a slightly hacky solution of offloading less preferable data to a second array, and then remerging later - could be replaced
 
 # begin overlaying arrays
 for partFilename in os.listdir(DIRECTORY):
     if partFilename.lower().endswith('.asc'): # any file that we want
+        
+        # these next few steps should be carried out regardless of the resolution of the cell
         filename = DIRECTORY+'/'+partFilename
         thisCellMeta = getAscMeta(open(filename, 'r'))
         thisArray = np.loadtxt(filename,skiprows=6)
         thisArray[thisArray==thisCellMeta['nodata_value']] = np.nan
         
-        if thisCellMeta['cellsize'] == REAL_CELL_SIZE: # no preprocessing needed for arrays of the highest accuracy
+        if thisCellMeta['cellsize'] == REAL_CELL_SIZE: # select the highest resolution cells; these do not need preprocessing and are stored straight into the main array
             
-            # get offset coordinates
+            # get offset coordinates - where to superimpose the array
             thisArrayOffset = (int(ARRAY_SHAPE[0]-(thisCellMeta['yllcorner']-ORIGIN_COORDINATES[1])*CELL_SCALE-thisArray.shape[1]),int((thisCellMeta['xllcorner']-ORIGIN_COORDINATES[0])*CELL_SCALE)) # very complicated code to find position of new array
             
-            # actually superimpose the array
+            # perform the superimposition (*fancyword*)
             mainArray[thisArrayOffset[0]:thisArrayOffset[0]+int(thisArray.shape[1]),thisArrayOffset[1]:thisArrayOffset[1]+int(thisArray.shape[0])] = thisArray  # this should be neater
         
         else: # for other cases, the cell is less authoritative, so put it into the secondary array
@@ -100,46 +106,34 @@ for partFilename in os.listdir(DIRECTORY):
             newSizeX = int(thisArray.shape[1]*(thisCellMeta['cellsize']/REAL_CELL_SIZE))
             newSizeY = int(thisArray.shape[0]*(thisCellMeta['cellsize']/REAL_CELL_SIZE))
             thisArray = np.array(Image.fromarray(thisArray).resize((newSizeX,newSizeY),resample=Image.BILINEAR))
-            thisArray[thisArray==thisCellMeta['nodata_value']] = np.nan
 
             # get offset coordinates
             thisArrayOffset = (int(ARRAY_SHAPE[0]-(thisCellMeta['yllcorner']-ORIGIN_COORDINATES[1])*CELL_SCALE-thisArray.shape[1]),int((thisCellMeta['xllcorner']-ORIGIN_COORDINATES[0])*CELL_SCALE)) # very complicated code to find position of new array
             
-            # actually superimpose the array
+            # superimpose the array
             secondArray[thisArrayOffset[0]:thisArrayOffset[0]+int(thisArray.shape[1]),thisArrayOffset[1]:thisArrayOffset[1]+int(thisArray.shape[0])] = thisArray  # this should be neater
 
 # eliminate NaNs (don't take too personally)
-count1=0
-count2=0
-count3=0
 for x in range(0,ARRAY_SHAPE[0]):
     for y in range(0,ARRAY_SHAPE[1]):
         if np.isnan(mainArray[x,y]): # this is the only case in which we take action
-            # attempt interpolation...
-            '''if x > 0 and x < ARRAY_SHAPE[0]-1 and y > 0 and y < ARRAY_SHAPE[1]-1: # ...unless the cell is around the edge
-                if  not np.isnan(np.prod(mainArray[x-1:x+1,y-1]) * np.prod(mainArray[x-1:x+1,y+1]) * mainArray[x-1,y] * mainArray[x+1,y]): # if no surrounding element is zero, we can use an "implementation" of "bilinear interpolation"
-                    # my implementation of biliniear interpolation may be foolishly called "finding the mean" by others...
-                    mainArray[x,y] = np.nanmean(mainArray[x-1:x+1,y-1:y+1])
-                    count1 += 1
-            # it would be nice to add an interpolation method for the edge values at this point ''' # this was not ever running, albeit massively slowing down code execution by doind compicated multiplication
             
-            # find missing data from less authoritative sources (ie. less detailed arrays)
+            # there once lived here a simple interpolation function to eliminate "dead pixels" - this has since been removed as it slowed down the code and had no effect whatsoever in 99% of cases [citation needed]
+            
+            # find missing data from less authoritative sources (ie. less detailed arrays) ONLY if that data is not a NaN
             if not np.isnan(secondArray[x,y]):
                 mainArray[x,y] = secondArray[x,y]
-                count2 += 1 # for debugging
-            # otherwise... I want to know about it!
-            else:
-                count3 += 1 # for debugging
+            # at this point, an else should be added to peform some kind of interpolaion patchwork for remaining NaNs
+
+# something should be done about large areas with no data about here
 
 # store extreme heights before we lose the information
 MAXIMUM_HEIGHT = np.nanmax(mainArray)
 MINIMUM_HEIGHT = np.nanmin(mainArray)
 
-# normalize the heights into 16 bits
+# normalize the heights into 16 bits - in future add an 8 bit option?
 mainArray -= MINIMUM_HEIGHT # we want to use as much entropy as possible!
 mainArray = (mainArray*65535/(MAXIMUM_HEIGHT-MINIMUM_HEIGHT)).astype(np.uint16) # spread the values evenly across 65536 integers and convert to uint16
-
-np.amax(mainArray)
 
 # write to a test file for debugging
 f = open('output.raw', 'wb')
@@ -150,11 +144,12 @@ f.close()
 tiff.imwrite('output.tiff',mainArray)
 
 
-# tell the user import settings for Unity
+# tell the user import settings for Unity - convert to more standard format in future to support more applications
+# Unity is not playing ball with files of resolution greater than 4096x4096 - BIG PROBLEM
 print('Bit depth: Bit 16') # future: add 8-bit support?
 print('Width:', ARRAY_SHAPE[0])
 print('Height:', ARRAY_SHAPE[1])
 print('Byte order: Windows')
 print('Flip vertically: No')
 print('Terrain size: '+str(ARRAY_SHAPE[0]*REAL_CELL_SIZE)+'x'+str(ARRAY_SHAPE[1]*REAL_CELL_SIZE)+'x'+str(MAXIMUM_HEIGHT-MINIMUM_HEIGHT)) # for user convenience
-print('Terrain Z position:', MINIMUM_HEIGHT)
+print('Terrain Z position:', MINIMUM_HEIGHT) # this is for users wanting to use multiple terrains and import them into a single world
