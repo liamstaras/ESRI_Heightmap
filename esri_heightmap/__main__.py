@@ -68,7 +68,7 @@ for partFilename in os.listdir(args.path_to_input):
         filename = args.path_to_input+'/'+partFilename
         thisAscMeta = getAscMeta(open(filename, 'r'))
         thisArray = np.loadtxt(filename,skiprows=6)
-        overlayCell(mainArray,ORIGIN_COORDINATES,thisArray,thisAscMeta,REAL_CELL_SIZE)
+        overlayArrays(mainArray,ORIGIN_COORDINATES,thisArray,thisAscMeta,REAL_CELL_SIZE)
 
 # eliminate NaNs (don't take too personally!)
 NaNReplace(mainArray,secondArray)
