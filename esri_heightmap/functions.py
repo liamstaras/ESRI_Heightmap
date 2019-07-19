@@ -48,11 +48,12 @@ def NaNReplace(primaryArray,secondaryArray):
                 if not np.isnan(secondaryArray[x,y]):
                     primaryArray[x,y] = secondaryArray[x,y]
                 # at this point, an "else" clause should be added to peform some kind of interpolaion patchwork for remaining NaNs
+    return primaryArray
 
 
-## convert array to given number of bits, losing distrubution information
+## use given number of bits for array, losing distrubution information
 def normalizeArray(array,bitDepth):
-    # normalize the heights into 16 bits - in future add an 8 bit option?
+    # normalize the heights into _bitDepth_ integers
     array -= np.nanmin(array) # we want to use as much entropy as possible!
-    array = (array*(2**bitDepth)/np.nanmax(array)).astype(np.uint16) # spread the values evenly across 65536 integers and convert to uint16
+    array = (array*(2**bitDepth)/np.nanmax(array)).astype(np.uint16) # spread the values evenly across _bitDepth_ integers and convert to uint16
     return array
