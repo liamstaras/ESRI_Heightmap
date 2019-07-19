@@ -1,2 +1,2 @@
 # initialization script for importing as package
-import esri_heightmap.functions
+from .functions import *
