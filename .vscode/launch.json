@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Python: Module",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/main.py",
-            "console": "integratedTerminal"
+            "module": "esri_heightmap",
+            "args": ["--output_mode", "TIFF", "./TEMP/LiDAR", "./TEMP/test.tiff", "--directory"]
         }
     ]
 }

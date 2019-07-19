@@ -26,7 +26,7 @@ def overlayCell(mainArray, originOffset, newArray, ascMeta, finalResolution):
     newArray[newArray==ascMeta['nodata_value']] = np.nan # eliminate nodata_value into nice NaNs
     
     if ascMeta['cellsize'] != finalResolution: # if cell size is different, we must resize
-        newArray = arrayResize(ascMeta,ascMeta['cellsize']/finalResolution)
+        newArray = arrayResize(newArray,ascMeta['cellsize']/finalResolution)
         
     # get offset coordinates - where to superimpose the array
     newArrayOffset = (int(mainArray.shape[0]-(ascMeta['yllcorner']-originOffset[1])*(1/finalResolution)-newArray.shape[1]),int((ascMeta['xllcorner']-originOffset[0])*(1/finalResolution))) # very complicated code to find position of new array
@@ -62,7 +62,7 @@ def normalizeArray(array,bitDepth):
 def exportTiff(normalizedArray,file):
     try:
         import tifffile as tiff
-        tiff.imwrite(file,normalizeArray)
+        tiff.imwrite(file,normalizedArray)
     except ImportError:
         print('tifffile required for tiff export')
         raise
