@@ -6,9 +6,9 @@ Download the repository and Python 3. Then, run `python3 setup.py` in the direct
 
 ## Usage
 ~~~
-python -m esri_heightmap --help
-usage: __main__.py [-h] [--output_mode {RAW,TIFF,BOTH}] [--directory]
-                   path_to_input path_to_output
+python -m esri_heightmap [-h] [--output_mode {RAW,TIFF,BOTH}]
+                              [--directory]
+                              path_to_input path_to_output
 
 Process *.asc files into an image heightmap
 
