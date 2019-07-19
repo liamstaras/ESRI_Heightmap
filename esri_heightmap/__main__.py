@@ -5,7 +5,7 @@ import argparse # running as application, so arguments very important
 import os # misc directory functions
 import numpy as np # important for arrays!
 
-parser = argparse.ArgumentParser(description='Process *.asc files into an image heightmap')
+parser = argparse.ArgumentParser(description='Process *.asc files into an image heightmap',prog='python -m esri_heightmap')
 parser.add_argument('path_to_input', type=str, help='path to *.asc file or directory containing *.asc files on which to run processing')
 parser.add_argument('path_to_output', type=str, help='path to output file without extension')
 parser.add_argument('--output_mode', type=str, choices=['RAW','TIFF','BOTH'], default='TIFF', help='output file format (default: BOTH)')
