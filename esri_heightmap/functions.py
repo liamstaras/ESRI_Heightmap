@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 import re
+import tifffile
 
 ## gets the metadata from a *.asc file and returns it as a friendly dictionary object
 def getAscMeta(fileObj):
@@ -47,3 +48,11 @@ def NaNReplace(primaryArray,secondaryArray):
                 if not np.isnan(secondaryArray[x,y]):
                     primaryArray[x,y] = secondaryArray[x,y]
                 # at this point, an "else" clause should be added to peform some kind of interpolaion patchwork for remaining NaNs
+
+
+## convert array to given number of bits, losing distrubution information
+def normalizeArray(array,bitDepth):
+    # normalize the heights into 16 bits - in future add an 8 bit option?
+    array -= np.nanmin(array) # we want to use as much entropy as possible!
+    array = (array*(2**bitDepth)/np.nanmax(array)).astype(np.uint16) # spread the values evenly across 65536 integers and convert to uint16
+    return array
