@@ -1,7 +1,6 @@
 import numpy as np
 from PIL import Image
 import re
-import tifffile
 
 ## gets the metadata from a *.asc file and returns it as a friendly dictionary object
 def getAscMeta(fileObj):
@@ -58,3 +57,18 @@ def normalizeArray(array,bitDepth):
     array -= np.nanmin(array) # we want to use as much entropy as possible!
     array = (array*(2**bitDepth)/np.nanmax(array)).astype(np.uint16) # spread the values evenly across _bitDepth_ integers and convert to uint16
     return array
+
+## tifffile wrapper
+def exportTiff(normalizedArray,file):
+    try:
+        import tifffile as tiff
+        tiff.imwrite(file,normalizeArray)
+    except ImportError:
+        print('tifffile required for tiff export')
+        raise
+
+## NumPy file export wrapper
+def exportRAW(normalizedArray,file):
+    f = open(file,'wb')
+    f.write(normalizedArray.tobytes()) # write it to a binary file
+    f.close()
