@@ -1,8 +1,9 @@
 # contains the command line application
+from . import * # run __init__.py script
+
 import argparse # running as application, so arguments very important
 import os # misc directory functions
 import numpy as np # important for arrays!
-from .functions import * # needs fixing!
 
 parser = argparse.ArgumentParser(description='Process *.asc files into an image heightmap')
 parser.add_argument('path_to_input', type=str, help='path to *.asc file or directory containing *.asc files on which to run processing')
