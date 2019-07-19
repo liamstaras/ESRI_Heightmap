@@ -20,7 +20,6 @@ def NaNReplace(primaryArray,secondaryArray):
                 # find missing data from less authoritative sources (ie. less detailed arrays) ONLY if that data is not a NaN
                 if not np.isnan(secondaryArray[x,y]):
                     primaryArray[x,y] = secondaryArray[x,y]
-                # at this point, an "else" clause should be added to peform some kind of interpolaion patchwork for remaining NaNs
     return primaryArray
 
 ## use given number of bits for array, losing distrubution information

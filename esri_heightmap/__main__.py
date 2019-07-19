@@ -53,25 +53,25 @@ if args.directory: # different code for multiple files
     del(minCoord)
     del(maxCoord)
 
+    ## actually import the data into NumPy
+
+    # create the arrays to store all the data
+    mainArray = np.full(ARRAY_SHAPE,np.NaN)
+    secondArray = np.full(ARRAY_SHAPE,np.NaN) # a slightly hacky solution of offloading less preferable data to a second array, and then remerging later - could be replaced
+
+    # begin overlaying arrays
+    for partFilename in os.listdir(args.path_to_input):
+        if partFilename.lower().endswith('.asc'): # any file that we want
+            filename = args.path_to_input+'/'+partFilename
+            thisAscMeta = getAscMeta(open(filename, 'r'))
+            thisArray = np.loadtxt(filename,skiprows=6)
+            overlayArrays(mainArray,ORIGIN_COORDINATES,thisArray,thisAscMeta,REAL_CELL_SIZE)
+
 else:
     print('not yet implemented!')
 
-## actually import the data into NumPy
-
-# create the arrays to store all the data
-mainArray = np.full(ARRAY_SHAPE,np.NaN)
-secondArray = np.full(ARRAY_SHAPE,np.NaN) # a slightly hacky solution of offloading less preferable data to a second array, and then remerging later - could be replaced
-
-# begin overlaying arrays
-for partFilename in os.listdir(args.path_to_input):
-    if partFilename.lower().endswith('.asc'): # any file that we want
-        filename = args.path_to_input+'/'+partFilename
-        thisAscMeta = getAscMeta(open(filename, 'r'))
-        thisArray = np.loadtxt(filename,skiprows=6)
-        overlayArrays(mainArray,ORIGIN_COORDINATES,thisArray,thisAscMeta,REAL_CELL_SIZE)
-
 # eliminate NaNs (don't take too personally!)
-NaNReplace(mainArray,secondArray)
+eliminateNoData(mainArray,secondArray)
 
 # store extreme heights before we lose the information
 MAXIMUM_HEIGHT = np.nanmax(mainArray)

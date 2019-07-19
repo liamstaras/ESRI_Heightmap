@@ -27,3 +27,10 @@ def overlayArrays(mainArray, originOffset, newArray, ascMeta, finalResolution):
     # perform the superimposition (*fancyword*)
     mainArray[newArrayOffset[0]:newArrayOffset[0]+int(newArray.shape[1]),newArrayOffset[1]:newArrayOffset[1]+int(newArray.shape[0])] = newArray  # this should be neater
     return mainArray
+
+## Clear NaNs
+def eliminateNoData(mainArray, secondArray=None):
+    if secondArray != None:
+        mainArray = NaNReplace(mainArray, secondArray)
+    else:
+        pass # add other NaN removal code HERE
