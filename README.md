@@ -5,7 +5,8 @@ Convert an ESRI Grid ASCII (\*.asc) to a binary headerless TIFF (\*.raw) for use
 Download the repository and Python 3. Then, run `python3 setup.py` in the directory with the code to install.
 
 ## Usage
-`python -m esri_heightmap --help
+~~~
+python -m esri_heightmap --help
 usage: __main__.py [-h] [--output_mode {RAW,TIFF,BOTH}] [--directory]
                    path_to_input path_to_output
 
@@ -20,7 +21,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {RAW,TIFF,BOTH}
                         output file format (default: BOTH)
-  --directory           run the process on a directory of *.asc files`
+  --directory           run the process on a directory of *.asc files
+~~~
 
 ## Use cases
 Our use case is for getting LiDAR data into Unity as a terrain for VR interaction. Add yours here!
