@@ -29,7 +29,7 @@ def overlayCell(mainArray, originOffset, newArray, ascMeta, finalResolution):
         newArray = arrayResize(ascMeta,ascMeta['cellsize']/finalResolution)
         
     # get offset coordinates - where to superimpose the array
-    newArrayOffset = (int(mainArray.shape[0]-(ascMeta['yllcorner']+originOffset[1])*(1/finalResolution)-newArray.shape[1]),int((ascMeta['xllcorner']+originOffset[0])*(1/finalResolution))) # very complicated code to find position of new array
+    newArrayOffset = (int(mainArray.shape[0]-(ascMeta['yllcorner']-originOffset[1])*(1/finalResolution)-newArray.shape[1]),int((ascMeta['xllcorner']-originOffset[0])*(1/finalResolution))) # very complicated code to find position of new array
     
     # perform the superimposition (*fancyword*)
     mainArray[newArrayOffset[0]:newArrayOffset[0]+int(newArray.shape[1]),newArrayOffset[1]:newArrayOffset[1]+int(newArray.shape[0])] = newArray  # this should be neater
