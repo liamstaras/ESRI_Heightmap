@@ -29,8 +29,8 @@ def overlayArrays(mainArray, originOffset, newArray, ascMeta, finalResolution):
     return mainArray
 
 ## Clear NaNs
-def eliminateNoData(mainArray, secondArray=None):
-    if secondArray != None:
+def eliminateNoData(mainArray, secondArray):
+    if secondArray != None: # if single file, secondArray will not exist, therefore interpolation is the only option
         mainArray = NaNReplace(mainArray, secondArray)
     else:
-        pass # add other NaN removal code HERE
+        pass # add other NaN removal code HERE ie. interpolation

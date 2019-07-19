@@ -68,7 +68,8 @@ if args.directory: # different code for multiple files
             overlayArrays(mainArray,ORIGIN_COORDINATES,thisArray,thisAscMeta,REAL_CELL_SIZE)
 
 else:
-    print('not yet implemented!')
+    mainArray = np.loadtxt(args.path_to_input,skiprows=6) # no need for any fancy overlaying!
+    secondArray = None
 
 # eliminate NaNs (don't take too personally!)
 eliminateNoData(mainArray,secondArray)
@@ -77,6 +78,7 @@ eliminateNoData(mainArray,secondArray)
 MAXIMUM_HEIGHT = np.nanmax(mainArray)
 MINIMUM_HEIGHT = np.nanmin(mainArray)
 
+# IPOS Model - output necessary!
 normalizedArray = normalizeArray(mainArray,16)
 if args.output_mode == 'TIFF':
     exportTiff(normalizedArray,args.path_to_output+'.tiff')
