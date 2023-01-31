@@ -68,7 +68,9 @@ if args.directory: # different code for multiple files
             overlayArrays(mainArray,ORIGIN_COORDINATES,thisArray,thisAscMeta,REAL_CELL_SIZE)
 
 else:
+    fileMeta = getAscMeta(open(args.path_to_input, 'r'))
     mainArray = np.loadtxt(args.path_to_input,skiprows=6) # no need for any fancy overlaying!
+    mainArray[mainArray==fileMeta['nodata_value']] = np.nan # eliminate nodata_value into nice NaNs
     secondArray = None
 
 # eliminate NaNs (don't take too personally!)
